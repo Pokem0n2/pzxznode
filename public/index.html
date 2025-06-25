@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>屁者先知OL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- 创建房间区域 -->
+    <section id="createRoomSection">
+        <h2>创建房间</h2><br>
+        <div class="form-group">
+            <label for="gameMode">游戏模式:</label>
+            <select id="gameMode" onchange="updatePlayerCountOptions()">
+                <option value="normal">普通模式</option>
+                <option value="underworld">里世界模式</option>
+            </select>
+        </div><br>
+        <div class="form-group">
+            <label for="playerCount">玩家人数:</label>
+            <select id="playerCount">
+                <!-- 选项将由JS动态生成 -->
+            </select>
+        </div><br>
+        <div align="center"><button id="createRoomBtn">创建房间</button></div>
+    </section>
+    <!-- 加入房间区域 -->
+    <section id="joinRoomSection" style="display: none;">
+        <h2>加入房间</h2>
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+            <label for="playerName">昵称:</label>
+            <input type="text" id="playerName" placeholder="输入你的昵称" style="flex: 1;">
+            <div align="center"><button id="joinRoomBtn">加入房间</button></div>
+        </div>
+    </section>
+    <!-- 玩家列表区域 -->
+    <section id="playerListSection" style="display: none;">
+        <h2>用户列表<span id="roomIdDisplay" style="display: none;"></span></h2><br>
+        <table>
+            <thead>
+                <!-- 表头添加类名以便自定义宽度 -->
+                <tr>
+                    <th class="col-id">序号</th>
+                    <th class="col-name">昵称</th>
+                    <th class="col-identity">身份</th>
+                    <th class="col-status">状态</th>
+                </tr>
+            </thead>
+            <tbody id="playersTableBody"></tbody>
+        </table><br>
+        <div align="center"><button id="startGameBtn" style="display: none;">开始游戏</button></div>
+    </section>
+    <!-- 游戏区域 -->
+    <div id="gameArea" style="display: none;">
+        <div class="game-header">
+            <div class="room-info">
+                <div class="hidden">房间号: <span id="roomId"></span></div>
+                <div>模式: <span id="gameModeDisplay"></span></div>
+                <div>人数: <span id="playerCountDisplay"></span></div>
+            </div>
+            <div class="player-info">
+                <div>玩家: <span id="playerNameDisplay"></span></div>
+                <div>序号: <span id="playerIdDisplay"></span></div>
+                <div>身份: <span id="playerIdentity"></span></div>
+            </div>
+        </div>
+        <div class="game-board">
+            <div class="intro">
+                <p><strong>普通模式：</strong></p>
+                <p>&nbsp;&nbsp;7人局：5名乘客、2名屁者 </p>
+                <p>&nbsp;&nbsp;8人局：6名乘客、1名屁者、1名响屁者（翻开小屁时，自曝加伤害） </p>
+                <p>&nbsp;&nbsp;9人局：6名乘客、3名屁者 </p>
+                <p>10人局：7名乘客、2名屁者、1名响屁者 </p>
+                <p><strong>里世界模式： </strong></p>
+                <p>&nbsp;&nbsp;8人局：4名乘客、1名探员、1名神父、1名小丑、1名响屁者 </p>
+                <p>&nbsp;&nbsp;9人局：4名乘客、1名探员、1名神父、1名小丑、2名屁者 </p>
+                <p>10人局：5名乘客、1名探员、1名神父、1名小丑、1名屁者、1名响屁者 </p><br>
+                <p><strong>有臭屁：对所有玩家造成2点伤害 </strong></p>
+                <p>有闷屁：对所有押牌玩家造成1点伤害，对所有空押玩家造成3点伤害。 </p>
+                <p><strong>有蔫儿屁：对所有玩家造成1点伤害，并使下1张无屁牌视为对所有玩家造成1点伤害的小屁牌； </strong></p>
+                <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若4张无屁牌均已翻开，则本次伤害不可防御。 </strong></p>
+                <p>有彩虹屁：对所有押牌玩家造成1点不可防御的伤害，对所有空押玩家造成2点伤害。 </p>
+                <p><strong>有连环屁：对所有玩家造成1点伤害，若上1张牌为小屁牌，则本次伤害+1； </strong></p>
+                <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若下1张牌为小屁牌，则该小屁牌伤害+1。（这里上一张和下一张特指相邻的牌） </strong></p>
+                <br>
+                <p>吸：无屁回合，抽2张牌，有屁回合，额外受1点伤害。 </p>
+                <p>骂：有屁回合，抽1张牌，投票+0.5，且投票阶段不可弃票。 </p>
+                <p>忍：防御本回合所有伤害。 </p>
+                <p>抓：有屁回合，可选择1位玩家，对其造成1点不可防御的伤害。 </p>
+                <p>吹：有屁回合，抽1张牌，并选择对相邻的两位玩家中的一位造成1点伤害。 </p>
+                <p>听：有屁回合，独自检视1位活跃玩家的身份。</p>
+            </div>
+        </div>
+        <!-- 技能介绍区域 -->
+        <div id="skillSection" class="skill-section" style="display: none;">
+            <h3>技能介绍</h3>
+            <div class="skill-input-area">
+                <div class="skill-controls">
+                    <div class="skill-input-group">
+                        <button id="announceSkillBtn">公示</button>
+                        <input type="text" id="skillInput" placeholder="输入技能代码"></div>
+                    <div id="skillPreview" class="skill-preview"></div>
+                </div>
+                <div id="announcedSkills" class="announced-skills"></div>
+            </div>
+        </div>
+        <!-- 玩家信息表格 -->
+        <div class="game-table-section">
+            <h3>玩家信息</h3>
+            <table class="game-table">
+                <thead>
+                    <tr>
+                        <th> </th><!-- 序号列 -->
+                        <th>昵称</th>
+                        <th>身份</th>
+                        <th>角色</th>
+                        <th>血量</th>
+                        <th>手牌</th><!-- 剩余手牌 -->
+                        <!-- 主持人不需要操作列 -->
+                        <th id="actionColumnHeader">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="playersInfoBody"></tbody>
+            </table>
+        </div>
+        <!-- 行动历史表格 -->
+        <div class="game-table-section">
+            <h3>行动历史</h3>
+            <table class="game-table">
+                <thead>
+                    <tr>
+                        <th> </th><!-- 玩家列 -->
+                        <th>R1</th>
+                        <th>R2</th>
+                        <th>R3</th>
+                        <th>R4</th>
+                        <th>R5</th>
+                        <th>R6</th>
+                        <th>R7</th>
+                        <th>R8</th>
+                    </tr>
+                </thead>
+                <tbody id="actionHistoryBody"></tbody>
+            </table>
+            <table class="env-table">
+                <tr id="envCardsRow"></tr>
+            </table>
+        </div>
+        <!-- 手牌区域 -->
+        <div id="handCardsSection" class="hand-cards-section">
+            <h3>你的手牌</h3>
+            <table id="handCardsTable"></table>
+        </div>
+        <!-- 玩家操作区域 -->
+        <div id="playerActions" class="player-actions" style="display: none;">
+            <button id="emptyBetBtn">空押</button>
+            <button id="betBtn">押牌</button>
+            <button id="drawBtn">摸牌</button>
+            <button id="stealBtn">抢牌</button>
+            <button id="exchangeBtn">换牌</button>
+            <button id="discardBtn">弃牌</button>
+            <!-- 移除玩家操作区域的下一轮按钮 -->
+        </div>
+        <!-- 主持人操作区域 -->
+        <div id="godActions" class="god-actions" style="display: none;">
+            <h3>主持人操作</h3>
+            <!-- 主持人操作区域只保留下一轮按钮 -->
+            <div align="center"><button id="godNextRoundBtn">下一轮</button></div>
+        </div>
+    </div>
+    <!-- 玩家选择浮窗 -->
+    <div id="playerSelectionModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>选择玩家</h3>
+            <div id="playerButtons"></div>
+            <button id="cancelPlayerSelection">取消</button>
+        </div>
+    </div>
+    <script src="NoSleep.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+
+</html>
