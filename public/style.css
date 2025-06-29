@@ -305,7 +305,7 @@ p {
 /* 输入框在第二位 */
 #skillInput {
     order: 2;
-    width: 120px !important; /* 固定宽度为60px */
+    width: 120px !important; /* 固定宽度为120px */
     flex: 0 0 auto; /* 禁止伸缩 */
     font-size: 0.8rem;
 }
@@ -315,6 +315,7 @@ p {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
 }
 
+/* 公示技能 */
 .announced-skills {
     display: flex;
     flex-direction: column;
@@ -338,6 +339,43 @@ p {
 .announced-skill:hover {
     transform: translateX(5px);
     background: rgba(200, 230, 201, 0.9);
+}
+
+/* 私聊消息控件样式 */
+.message-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 5px;
+    width: 35%;
+}
+
+.message-input-group {
+    display: flex;
+    gap: 5px;
+}
+
+#messageInput, #messageOutput {
+    flex: 1;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 0.8rem;
+}
+
+#messageOutput {
+    background-color: #f8f8f8;
+}
+
+#sendMessageBtn {
+    padding: 5px 10px;
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 /* 手牌区域 */
@@ -404,6 +442,7 @@ p {
 #createRoomBtn,
 #joinRoomBtn,
 #startGameBtn,
+#godRevealBtn,
 #godNextRoundBtn {
     background: var(--accent-gradient);
     width: auto;
@@ -420,6 +459,7 @@ p {
     letter-spacing: 1px;
 }
 
+#godRevealBtn:hover,
 #godNextRoundBtn:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
@@ -645,12 +685,12 @@ section,
 
 /* 玩家信息表格列宽 */
 #playersInfoBody tr td:nth-child(1) { width: 2%; } /* 序号 */
-#playersInfoBody tr td:nth-child(2) { width: 8%; } /* 昵称 */
+#playersInfoBody tr td:nth-child(2) { width: 18%; } /* 昵称 */
 #playersInfoBody tr td:nth-child(3) { width: 10%; } /* 身份 */
-#playersInfoBody tr td:nth-child(4) { width: 20%; } /* 角色 */
+#playersInfoBody tr td:nth-child(4) { width: 25%; } /* 角色 */
 #playersInfoBody tr td:nth-child(5) { width: 15%; } /* 血量 */
-#playersInfoBody tr td:nth-child(6) { width: 8%; } /* 剩余手牌 */
-#playersInfoBody tr td:nth-child(7) { width: 25%; } /* 操作 */
+#playersInfoBody tr td:nth-child(6) { width: 10%; } /* 剩余手牌 */
+#playersInfoBody tr td:nth-child(7) { width: 20%; } /* 操作 */
 
 /* 行动历史表格列宽 */
 #actionHistoryBody tr td:nth-child(1) { width: 15%; } /* 玩家 */
@@ -664,12 +704,13 @@ section,
 #actionHistoryBody tr td:nth-child(9) { min-width: 37px; } /* 第1-8轮 */
 
 /* 玩家信息表格 - 血量和手牌列居中 */
-#playersInfoBody tr td:nth-child(1)
-#playersInfoBody tr td:nth-child(2)
-#playersInfoBody tr td:nth-child(3)
-#playersInfoBody tr td:nth-child(4)
-#playersInfoBody tr td:nth-child(5)
-#playersInfoBody tr td:nth-child(6) {
+#playersInfoBody tr td:nth-child(1),
+#playersInfoBody tr td:nth-child(2),
+#playersInfoBody tr td:nth-child(3),
+#playersInfoBody tr td:nth-child(4),
+#playersInfoBody tr td:nth-child(5),
+#playersInfoBody tr td:nth-child(6),
+#playersInfoBody tr td:nth-child(7) {
     text-align: center;
     vertical-align: middle;
 }
@@ -764,6 +805,61 @@ section,
     margin-bottom: 15px;
     font-size: 1.1rem;
     color: #2c3e50;
+}
+
+/* 主持人批准浮窗样式 */
+#approvalModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#approvalModal .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 90%;
+    text-align: center;
+}
+
+#approvalMessage {
+    margin: 15px 0;
+    font-size: 1rem;
+}
+
+/* 高亮翻开的行动牌 */
+.highlighted-cell {
+    background-color: rgba(255, 255, 200, 0.7) !important; /* 淡黄色半透明背景 */
+    transition: background-color 0.5s ease; /* 平滑过渡效果 */
+    box-shadow: 0 0 8px rgba(255, 220, 0, 0.8); /* 添加发光效果 */
+    border: 2px solid #ffcc00 !important; /* 黄色边框 */
+    position: relative;
+    z-index: 10;
+}
+
+/* 脉动动画效果 */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 220, 0, 0.6); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 220, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 220, 0, 0); }
+}
+
+.highlighted-cell {
+    animation: pulse 1.5s infinite; /* 脉动动画 */
+}
+
+/* 禁用按钮样式 */
+.disabled-btn {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #95a5a6 !important;
 }
 
 /* 断开状态样式 */

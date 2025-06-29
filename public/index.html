@@ -13,14 +13,14 @@
     <section id="createRoomSection">
         <h2>创建房间</h2><br>
         <div class="form-group">
-            <label for="gameMode">游戏模式:</label>
+            <label for="gameMode">游戏模式：</label>
             <select id="gameMode" onchange="updatePlayerCountOptions()">
                 <option value="normal">普通模式</option>
                 <option value="underworld">里世界模式</option>
             </select>
         </div><br>
         <div class="form-group">
-            <label for="playerCount">玩家人数:</label>
+            <label for="playerCount">玩家人数：</label>
             <select id="playerCount">
                 <!-- 选项将由JS动态生成 -->
             </select>
@@ -31,7 +31,7 @@
     <section id="joinRoomSection" style="display: none;">
         <h2>加入房间</h2>
         <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
-            <label for="playerName">昵称:</label>
+            <label for="playerName">昵称：</label>
             <input type="text" id="playerName" placeholder="输入你的昵称" style="flex: 1;">
             <div align="center"><button id="joinRoomBtn">加入房间</button></div>
         </div>
@@ -126,6 +126,14 @@
                 <tbody id="playersInfoBody"></tbody>
             </table>
         </div>
+        <!-- 玩家与主持人私聊控件 -->
+        <div class="message-controls">
+            <div class="message-input-group">
+                <input type="text" id="messageInput" placeholder="发送消息">
+                <button id="sendMessageBtn">发送</button>
+                <input type="text" id="messageOutput" placeholder="接收消息" readonly>
+            </div>
+        </div>
         <!-- 行动历史表格 -->
         <div class="game-table-section">
             <h3>行动历史</h3>
@@ -167,8 +175,11 @@
         <!-- 主持人操作区域 -->
         <div id="godActions" class="god-actions" style="display: none;">
             <h3>主持人操作</h3>
-            <!-- 主持人操作区域只保留下一轮按钮 -->
-            <div align="center"><button id="godNextRoundBtn">下一轮</button></div>
+            <!-- 主持人操作按钮 -->
+            <div align="center">
+                <button id="godRevealBtn">翻开行动牌</button>
+                <button id="godNextRoundBtn">下一轮</button>
+            </div>
         </div>
     </div>
     <!-- 玩家选择浮窗 -->
@@ -177,6 +188,17 @@
             <h3>选择玩家</h3>
             <div id="playerButtons"></div>
             <button id="cancelPlayerSelection">取消</button>
+        </div>
+    </div>
+    <!-- 主持人批准浮窗 -->
+    <div id="approvalModal" class="modal" style="display: none; z-index: 1001;">
+        <div class="modal-content" style="max-width: 300px; text-align: center;">
+            <h3>操作批准请求</h3>
+            <p id="approvalMessage">请批准操作</p>
+            <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: center;">
+                <button id="approveBtn" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px;">通过</button>
+                <button id="rejectBtn" style="padding: 10px 20px; background-color: #f44336; color: white; border: none; border-radius: 5px;">驳回</button>
+            </div>
         </div>
     </div>
     <script src="NoSleep.js"></script>
