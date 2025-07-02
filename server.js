@@ -56,8 +56,18 @@ let gameState = {
     actionDeck: [],
     gameStarted: false,
     currentRound: 1,
-    exposedPlayers: [] // 存储被曝光玩家的UUID
+    exposedPlayers: [], // 存储被曝光玩家的UUID
+    revealedPlayers: [] // 存储已翻开的玩家
 };
+
+// 最后联系的玩家
+let lastMessenger = null;
+
+// 存储最后一个请求者的socket ID
+// let lastRequester = null;
+
+// 替换 lastRequester 为FIFO队列，以管理所有请求
+let requestQueue = [];
 
 io.on('connection', (socket) => {
     console.log('New client connected');
@@ -214,6 +224,8 @@ io.on('connection', (socket) => {
             const players = gameState.players.filter(p => p.role === 'player');
             players.forEach((player, index) => {
                 player.identity = shuffledIdentities[index];
+                // 添加阵营信息，保留属性未来备用
+                player.camp = ['屁者', '响屁者', '小丑'].includes(player.identity) ? 'pee' : 'passenger';
                 console.log(`Assigned ${player.identity} to ${player.name}`);
             });
 
@@ -223,14 +235,16 @@ io.on('connection', (socket) => {
 
             // 角色按钮数组（打乱顺序）
             const characterButtons = shuffleArray([
-                '领导', '保安', '社会人', '保洁阿姨', '外卖小哥', '大厨', '网红', 'JK少女', '宝宝', 'iRobot',
-                '房东', '班主任', '阳光男孩', '鼻窦炎小孩', '臭嘴男', '烟男', '外乡人', '纸袋头', '老中医',
-                '医生', '地主', '忍者', '侦探', '女巫', '社恐', '僵尸', '中介', '律师', '阿Q', '非酋', '变脸',
-                '盲侠', '树精', '镖师', '小偷', '横纲', '键盘侠', '匹诺曹', '透明人', '吸血鬼', '南瓜头', '孙悟空',
-                '林黛玉', '预言家', '特战员', '催眠师', '修理工', '接听员', 'Robot', '外星人', '诸葛亮', '美食家',
-                '喵星人', '瘟疫医生', '榜一大哥', '电梯战神', '黑旋风李逵', '屁负比丘尼', '忧郁的女士', '哈姆雷特',
-                '捉妖师','奥本海默','雷电法王','少爷','丁一白','外卖小妹','梁山伯','祝英台','吕洞宾','钟离权',
-                '铁拐李','张果老','蓝采和','曹国舅','韩湘子','何仙姑','钟馗'
+                '领导', '保安', '社会人', '保洁阿姨', '外卖小哥', '大厨', '网红', // 'JK少女',
+                '宝宝', 'iRobot', '房东', '班主任', '阳光男孩', '鼻窦炎小孩', '臭嘴男', '烟男',
+                '外乡人', '纸袋头', '老中医', '医生', '地主', '忍者', '侦探', '女巫', '社恐',
+                '僵尸', '中介', '律师', '阿Q', '非酋', '变脸', '盲侠', '树精', '镖师', '小偷',
+                '横纲', '键盘侠', '匹诺曹', '透明人', '吸血鬼', '南瓜头', '孙悟空', '林黛玉',
+                '预言家', '特战员', '催眠师', '修理工', '接听员', 'Robot', '外星人', '诸葛亮',
+                '美食家', '喵星人', '瘟疫医生', '榜一大哥', '电梯战神', '屁负比丘尼', // '黑旋风李逵',
+                '忧郁的女士', '哈姆雷特', '捉妖师', '奥本海默', '雷电法王', '少爷', '丁一白',
+                '外卖小妹', '梁山伯', '祝英台', '吕洞宾', '钟离权', '铁拐李', '张果老', '蓝采和',
+                '曹国舅', '韩湘子', '何仙姑', '钟馗'
             ]);
 
             // 给每位玩家分配角色选项
@@ -253,6 +267,9 @@ io.on('connection', (socket) => {
             });
 
             gameState.gameStarted = true;
+
+            // 重置已翻开玩家列表
+            gameState.revealedPlayers = [];
 
             // 发出游戏开始事件
             io.emit('gameStarted', {
@@ -292,6 +309,14 @@ io.on('connection', (socket) => {
                 card: gameState.envCards[cardIndex]
             });
         }
+    });
+
+    // 请求玩家信息更新处理
+    socket.on('requestPlayerInfoUpdate', () => {
+        // 广播给所有玩家
+        io.emit('updatePlayerInfo', {
+            players: gameState.players
+        });
     });
 
     // 玩家操作事件
@@ -406,8 +431,17 @@ io.on('connection', (socket) => {
                 break;
         }
 
+        // 在所有操作后强制更新玩家信息
+        io.emit('updatePlayerInfo', {
+            players: gameState.players
+        });
+
+        // 广播游戏状态更新给所有玩家
+        io.emit('gameStateUpdate', gameState);
+        // break;
+
         // 更新游戏状态（只通知当前玩家更新自己的行动历史）
-        socket.emit('gameStateUpdate', gameState);
+        // socket.emit('gameStateUpdate', gameState);
     });
 
     // 角色选择事件
@@ -484,6 +518,147 @@ io.on('connection', (socket) => {
         });
     });
 
+    // 私聊消息处理
+    socket.on('sendMessageToHost', (data) => {
+        const player = gameState.players.find(p => p.id === socket.id);
+        if (!player || player.role !== 'player') return;
+
+        // 更新最后联系的玩家
+        lastMessenger = player.uuid;
+
+        // 找到主持人
+        const host = gameState.players.find(p => p.role === 'god');
+        if (host) {
+            // 发送消息给主持人
+            io.to(host.id).emit('messageFromPlayer', {
+                message: `${player.name}: ${data.message}`
+            });
+        }
+    });
+
+    socket.on('sendMessageToPlayer', (data) => {
+        const player = gameState.players.find(p => p.id === socket.id);
+        if (!player || player.role !== 'god') return;
+
+        if (lastMessenger) {
+            // 找到最后联系的玩家
+            const targetPlayer = gameState.players.find(p => p.uuid === lastMessenger);
+            if (targetPlayer) {
+                // 发送消息给该玩家
+                io.to(targetPlayer.id).emit('messageFromHost', {
+                    message: `主持人: ${data.message}`
+                });
+            }
+        }
+    });
+
+    // 主持人处理请求
+    socket.on('sendRequestToHost', (data) => {
+        const player = gameState.players.find(p => p.id === socket.id);
+        if (!player || player.role !== 'player') return;
+
+        // 找到主持人
+        const host = gameState.players.find(p => p.role === 'god');
+        if (host) {
+            // // 记录请求者的socket ID
+            // lastRequester = socket.id;
+
+            // // 转发请求给主持人
+            // io.to(host.id).emit('operationRequest', {
+            //     playerName: player.name,
+            //     actionType: data.actionType
+            // });
+
+            // 将请求加入队列
+            requestQueue.push({
+                playerId: socket.id,
+                playerName: player.name,
+                actionType: data.actionType
+            });
+
+            // 仅当队列长度为1时，通知主持人（避免重复通知）
+            if (requestQueue.length === 1) {
+                notifyHost(host.id);
+            }
+        }
+    });
+
+    // 通知主持人函数
+    function notifyHost(hostId) {
+        if (requestQueue.length > 0) {
+            const request = requestQueue[0];
+            io.to(hostId).emit('operationRequest', {
+                playerName: request.playerName,
+                actionType: request.actionType
+            });
+        }
+    }
+
+    // 处理主持人响应
+    socket.on('approvalResponse', (data) => {
+        const player = gameState.players.find(p => p.id === socket.id);
+        if (!player || player.role !== 'god') return;
+
+        // // 将批准结果发送回请求的玩家
+        // if (lastRequester) {
+        //     io.to(lastRequester).emit('approvalResult', {
+        //         approved: data.approved
+        //     });
+        //     // 重置请求发起玩家
+        //     lastRequester = null;
+        // }
+
+        // 处理队列首个请求
+        if (requestQueue.length > 0) {
+            const currentRequest = requestQueue.shift();
+            io.to(currentRequest.playerId).emit('approvalResult', {
+                approved: data.approved
+            });
+
+            // 继续处理下一个请求
+            notifyHost(socket.id);
+        }
+    });
+
+    // 处理翻开请求
+    socket.on('revealPlayerAction', (data) => {
+        const player = gameState.players.find(p => p.uuid === data.uuid);
+        if (!player || player.role !== 'god') return;
+
+        // 获取所有玩家（排除主持人）
+        const players = gameState.players
+            .filter(p => p.role === 'player')
+            .sort((a, b) => a.playerId - b.playerId);
+
+        // 检查是否还有未翻开的玩家
+        if (gameState.revealedPlayers.length >= players.length) return;
+
+        // 获取下一个玩家
+        const nextPlayer = players[gameState.revealedPlayers.length];
+        const action = nextPlayer.actions[data.round];
+
+        // 确定行动文本
+        let actionText = '-';
+        if (action) {
+            if (action.type === 'emptyBet') {
+                actionText = '空押';
+            } else if (action.type === 'bet' && action.card) {
+                actionText = action.card.name;
+            }
+        }
+
+        // 广播行动信息
+        io.emit('playerActionRevealed', {
+            playerId: nextPlayer.playerId,
+            playerName: nextPlayer.name,
+            round: data.round,
+            actionText: actionText
+        });
+
+        // 记录已翻开的玩家
+        gameState.revealedPlayers.push(nextPlayer.uuid);
+    });
+
     // 下一轮事件
     socket.on('nextRound', (data) => {
         const player = gameState.players.find(p => p.uuid === data.uuid);
@@ -501,6 +676,9 @@ io.on('connection', (socket) => {
 
         // 进入下一轮
         gameState.currentRound++;
+
+        // 重置已翻开玩家列表
+        gameState.revealedPlayers = [];
 
         // 重置玩家的当前操作状态
         gameState.players.forEach(p => {

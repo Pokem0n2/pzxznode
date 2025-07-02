@@ -189,7 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 监听批准结果
     socket.on('approvalResult', (data) => {
+        // 重置请求状态
         approvalPending = false;
+
         if (data.approved) {
             // 根据操作类型执行后续代码
             switch (currentActionType) {
@@ -211,7 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const targetUuid = currentActionData.targetUuid;
                     if (!currentPlayer.checkedPlayers.includes(targetUuid)) {
                         currentPlayer.checkedPlayers.push(targetUuid);
+                        // 更新玩家信息显示
                         renderPlayersInfoTable(gameState.players);
+                        // 通知服务器记录查验操作
                         socket.emit('playerCheck', {
                             uuid: currentPlayer.uuid,
                             targetUuid: targetUuid
@@ -252,37 +256,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (approvalPending) return;
 
                 const targetUuid = e.target.dataset.uuid;
-                approvalPending = true;
-                currentActionType = 'check';
-                currentActionData = { targetUuid };
 
-                // 防止重复查验
-                // if (!currentPlayer.checkedPlayers.includes(targetUuid)) {
-                //     currentPlayer.checkedPlayers.push(targetUuid);
-                //     renderPlayersInfoTable(gameState.players);
+                // sendApprovalRequest('check');
+                sendApprovalRequest('check', { targetUuid });
 
-                // 发送请求给主持人
-                socket.emit('sendRequestToHost', {
-                    actionType: '查验身份',
-                    playerName: currentPlayer.name
-                });
-                // }
+                // approvalPending = true;
+                // currentActionType = 'check';
+                // currentActionData = { targetUuid };
+
+                // // 防止重复查验
+                // // if (!currentPlayer.checkedPlayers.includes(targetUuid)) {
+                // //     currentPlayer.checkedPlayers.push(targetUuid);
+                // //     renderPlayersInfoTable(gameState.players);
+
+                // // 发送请求给主持人
+                // socket.emit('sendRequestToHost', {
+                //     actionType: '查验身份',
+                //     playerName: currentPlayer.name
+                // });
+                // // }
             } else if (e.target.classList.contains('expose-btn')) {
                 if (approvalPending) return;
 
                 const targetUuid = e.target.dataset.uuid;
-                approvalPending = true;
-                currentActionType = 'expose';
-                currentActionData = { targetUuid };
 
-                // 发送请求给主持人
-                socket.emit('sendRequestToHost', {
-                    actionType: '曝光玩家',
-                    playerName: currentPlayer.name
-                });
+                // sendApprovalRequest('expose');
+                sendApprovalRequest('expose', { targetUuid });
+
+                // approvalPending = true;
+                // currentActionType = 'expose';
+                // currentActionData = { targetUuid };
+
+                // // 发送请求给主持人
+                // socket.emit('sendRequestToHost', {
+                //     actionType: '曝光玩家',
+                //     playerName: currentPlayer.name
+                // });
             }
         }
     });
+
+    // 在发起请求时设置独立状态
+    function sendApprovalRequest(actionType, actionData = null) {
+        if (approvalPending) return;
+
+        approvalPending = true;
+        currentActionType = actionType;
+        currentActionData = actionData;
+
+        socket.emit('sendRequestToHost', {
+            actionType: getActionDescription(actionType)
+        });
+    }
+
+    // 玩家操作申请行为类型映射
+    function getActionDescription(type) {
+        const map = {
+            hpMinus: '血量减少',
+            hpPlus: '血量增加',
+            check: '查验身份',
+            expose: '曝光玩家',
+            draw: '摸牌',
+            steal: '抢牌',
+            exchange: '换牌'
+        };
+        return map[type] || '未知操作';
+    }
 
     // 根据模式更新人数选项
     function updatePlayerCountOptions() {
@@ -960,14 +999,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     minusBtn.addEventListener('click', () => {
                         if (approvalPending) return;
 
-                        approvalPending = true;
-                        currentActionType = 'hpMinus';
+                        sendApprovalRequest('hpMinus');
+                        // approvalPending = true;
+                        // currentActionType = 'hpMinus';
 
-                        // 发送请求给主持人
-                        socket.emit('sendRequestToHost', {
-                            actionType: '血量减少',
-                            playerName: currentPlayer.name
-                        });
+                        // // 发送请求给主持人
+                        // socket.emit('sendRequestToHost', {
+                        //     actionType: '血量减少',
+                        //     playerName: currentPlayer.name
+                        // });
                     });
                     hpContainer.appendChild(minusBtn);
                 }
@@ -985,14 +1025,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     plusBtn.addEventListener('click', () => {
                         if (approvalPending) return;
 
-                        approvalPending = true;
-                        currentActionType = 'hpPlus';
+                        sendApprovalRequest('hpPlus');
+                        // approvalPending = true;
+                        // currentActionType = 'hpPlus';
 
-                        // 发送请求给主持人
-                        socket.emit('sendRequestToHost', {
-                            actionType: '血量增加',
-                            playerName: currentPlayer.name
-                        });
+                        // // 发送请求给主持人
+                        // socket.emit('sendRequestToHost', {
+                        //     actionType: '血量增加',
+                        //     playerName: currentPlayer.name
+                        // });
                     });
                     hpContainer.appendChild(plusBtn);
                 }
@@ -1264,14 +1305,15 @@ document.addEventListener('DOMContentLoaded', () => {
     drawBtn.addEventListener('click', () => {
         if (approvalPending) return;
 
-        approvalPending = true;
-        currentActionType = 'draw';
+        sendApprovalRequest('draw');
+        // approvalPending = true;
+        // currentActionType = 'draw';
 
-        // 发送请求给主持人
-        socket.emit('sendRequestToHost', {
-            actionType: '摸牌',
-            playerName: currentPlayer.name
-        });
+        // // 发送请求给主持人
+        // socket.emit('sendRequestToHost', {
+        //     actionType: '摸牌',
+        //     playerName: currentPlayer.name
+        // });
 
         socket.emit('requestPlayerInfoUpdate');
     });
@@ -1279,27 +1321,29 @@ document.addEventListener('DOMContentLoaded', () => {
     stealBtn.addEventListener('click', () => {
         if (approvalPending) return;
 
-        approvalPending = true;
-        currentActionType = 'steal';
+        sendApprovalRequest('steal');
+        // approvalPending = true;
+        // currentActionType = 'steal';
 
-        // 发送请求给主持人
-        socket.emit('sendRequestToHost', {
-            actionType: '抢牌',
-            playerName: currentPlayer.name
-        });
+        // // 发送请求给主持人
+        // socket.emit('sendRequestToHost', {
+        //     actionType: '抢牌',
+        //     playerName: currentPlayer.name
+        // });
     });
 
     exchangeBtn.addEventListener('click', () => {
         if (approvalPending) return;
 
-        approvalPending = true;
-        currentActionType = 'exchange';
+        sendApprovalRequest('exchange');
+        // approvalPending = true;
+        // currentActionType = 'exchange';
 
-        // 发送请求给主持人
-        socket.emit('sendRequestToHost', {
-            actionType: '换牌',
-            playerName: currentPlayer.name
-        });
+        // // 发送请求给主持人
+        // socket.emit('sendRequestToHost', {
+        //     actionType: '换牌',
+        //     playerName: currentPlayer.name
+        // });
     });
 
     discardBtn.addEventListener('click', () => {
