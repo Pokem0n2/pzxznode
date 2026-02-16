@@ -14,6 +14,40 @@ let actionTaken = false;
 document.addEventListener('DOMContentLoaded', () => {
     const socket = io();
 
+    // 页面加载时检查是否有保存的游戏数据
+    const savedData = localStorage.getItem('pzxnGameData');
+    if (savedData) {
+        try {
+            const gameData = JSON.parse(savedData);
+            console.log('Found saved game data, attempting to restore session...');
+            
+            // 恢复本地状态
+            if (gameData.currentPlayer) {
+                currentPlayer.uuid = gameData.currentPlayer.uuid;
+                currentPlayer.playerId = gameData.currentPlayer.playerId;
+                currentPlayer.name = gameData.currentPlayer.name;
+                currentPlayer.role = gameData.currentPlayer.role;
+                currentPlayer.identity = gameData.currentPlayer.identity;
+                currentPlayer.handCards = gameData.currentPlayer.handCards || [];
+                currentPlayer.isGod = gameData.currentPlayer.role === 'god';
+                
+                // 立即更新页面上显示的玩家信息
+                document.getElementById('playerNameDisplay').textContent = gameData.currentPlayer.name || '';
+                document.getElementById('playerIdDisplay').textContent = gameData.currentPlayer.playerId || '';
+                document.getElementById('playerIdentity').textContent = gameData.currentPlayer.identity || '';
+                
+                // 渲染手牌表格
+                renderHandCardsTable();
+            }
+            
+            if (gameData.room) {
+                gameState.room = gameData.room;
+            }
+        } catch (error) {
+            console.error('Failed to parse saved game data:', error);
+        }
+    }
+
     // DOM元素
     const createRoomSection = document.getElementById('createRoomSection');
     const joinRoomSection = document.getElementById('joinRoomSection');
@@ -354,8 +388,98 @@ document.addEventListener('DOMContentLoaded', () => {
     // 监听模式变化
     document.getElementById('gameMode').addEventListener('change', updatePlayerCountOptions);
 
-    // 防止超时自动锁屏
-    let noSleep = new NoSleep();
+    // 防止超时自动锁屏 - 跨平台解决方案
+    let wakeLock = null;
+    let keepAwakeInterval = null;
+    
+    /**
+     * 保持屏幕常亮的跨平台解决方案
+     */
+    function keepScreenAwake() {
+        // 尝试使用现代的 Wake Lock API
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen')
+                .then((lock) => {
+                    wakeLock = lock;
+                    console.log('Wake Lock 已激活');
+                    
+                    // 监听释放事件，当屏幕被关闭时重新获取
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock 已释放');
+                        // 当页面重新可见时尝试重新获取
+                        if (document.visibilityState === 'visible') {
+                            keepScreenAwake();
+                        }
+                    });
+                })
+                .catch((err) => {
+                    console.warn('无法获取 Wake Lock:', err);
+                    // 降级方案
+                    useFallbackMethod();
+                });
+        } else {
+            // 不支持 Wake Lock API，使用降级方案
+            useFallbackMethod();
+        }
+    }
+    
+    /**
+     * 降级方案：使用定时器模拟用户活动
+     */
+    function useFallbackMethod() {
+        console.log('使用降级方案保持屏幕常亮');
+        
+        // 清除之前的定时器
+        if (keepAwakeInterval) {
+            clearInterval(keepAwakeInterval);
+        }
+        
+        // 每10秒模拟一次用户活动
+        keepAwakeInterval = setInterval(() => {
+            if (!document.hidden) {
+                // 模拟轻量级的DOM操作
+                const dummyElement = document.createElement('div');
+                dummyElement.style.position = 'fixed';
+                dummyElement.style.top = '-100px';
+                dummyElement.style.left = '-100px';
+                dummyElement.style.width = '1px';
+                dummyElement.style.height = '1px';
+                dummyElement.style.opacity = '0';
+                dummyElement.id = 'keep-awake-dummy';
+                
+                // 移除旧的dummy元素（如果存在）
+                const oldDummy = document.getElementById('keep-awake-dummy');
+                if (oldDummy) {
+                    oldDummy.remove();
+                }
+                
+                // 添加新的dummy元素
+                document.body.appendChild(dummyElement);
+                
+                // 立即移除，只需要DOM操作的副作用
+                setTimeout(() => {
+                    dummyElement.remove();
+                }, 0);
+            }
+        }, 10000);
+    }
+    
+    /**
+     * 停止保持屏幕常亮
+     */
+    function stopKeepScreenAwake() {
+        if (wakeLock) {
+            wakeLock.release();
+            wakeLock = null;
+            console.log('Wake Lock 已释放');
+        }
+        
+        if (keepAwakeInterval) {
+            clearInterval(keepAwakeInterval);
+            keepAwakeInterval = null;
+            console.log('降级方案已停止');
+        }
+    }
 
     // 当前玩家状态
     let currentPlayer = {
@@ -388,31 +512,36 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedCardIndex = -1;
     let currentActionType = null;
 
-    // // 添加全局重连计时器
-    // let reconnectTimer;
+    // 全局重连计时器
+    let reconnectTimer;
 
-    // // 监听断开事件
-    // socket.on('disconnect', () => {
-    //     // 如果游戏已开始，尝试重连
-    //     if (gameState.gameStarted) {
-    //         reconnectTimer = setInterval(() => {
-    //             socket.connect(); // 尝试重新连接
-    //         }, 30000);
-    //     }
-    // });
+    // 监听断开事件
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        // 如果游戏已开始，尝试重连
+        if (gameState.gameStarted || currentPlayer.uuid) {
+            console.log('Attempting to reconnect...');
+            reconnectTimer = setInterval(() => {
+                socket.connect(); // 尝试重新连接
+            }, 5000); // 每5秒尝试一次
+        }
+    });
 
-    // // 监听重新连接事件
-    // socket.on('connect', () => {
-    //     clearInterval(reconnectTimer);
+    // 监听重新连接事件
+    socket.on('connect', () => {
+        console.log('Connected to server');
+        clearInterval(reconnectTimer);
 
-    //     if (currentPlayer.uuid && gameState.room) {
-    //         // 发送重连请求
-    //         socket.emit('reconnectPlayer', {
-    //             roomId: gameState.room.id,
-    //             uuid: currentPlayer.uuid
-    //         });
-    //     }
-    // });
+        // 尝试恢复游戏状态
+        const savedData = loadGameData();
+        if (savedData && savedData.currentPlayer.uuid) {
+            console.log('Attempting to restore game session...');
+            // 发送重连请求
+            socket.emit('reconnectPlayer', {
+                uuid: savedData.currentPlayer.uuid
+            });
+        }
+    });
 
     // 初始化手牌表格
     function initHandCardsTable() {
@@ -476,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 当页面加载时检查是否有房间存在
     socket.on('roomExists', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         createRoomSection.style.display = 'none';
         joinRoomSection.style.display = 'block';
         playerListSection.style.display = 'block';
@@ -530,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 在创建房间后显示开始按钮
     socket.on('roomCreated', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         createRoomSection.style.display = 'none';
         joinRoomSection.style.display = 'none';
         playerListSection.style.display = 'block';
@@ -539,23 +668,56 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPlayersTable(data.players);
     });
 
+    // 保存游戏数据到localStorage
+    function saveGameData() {
+        const gameData = {
+            currentPlayer: {
+                uuid: currentPlayer.uuid,
+                playerId: currentPlayer.playerId,
+                name: currentPlayer.name,
+                role: currentPlayer.role,
+                identity: currentPlayer.identity,
+                handCards: currentPlayer.handCards || []
+            },
+            room: gameState.room
+        };
+        localStorage.setItem('pzxnGameData', JSON.stringify(gameData));
+    }
+
+    // 从localStorage加载游戏数据
+    function loadGameData() {
+        const savedData = localStorage.getItem('pzxnGameData');
+        if (savedData) {
+            try {
+                const gameData = JSON.parse(savedData);
+                return gameData;
+            } catch (error) {
+                console.error('Failed to parse saved game data:', error);
+                return null;
+            }
+        }
+        return null;
+    }
+
     // 接收房间信息
     socket.on('setRoomInfo', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         currentPlayer.uuid = data.uuid;
         roomIdDisplay.textContent = data.roomId;
+        saveGameData();
     });
 
     // 接收玩家信息
     socket.on('setPlayerInfo', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         currentPlayer.playerId = data.playerId;
         currentPlayer.uuid = data.uuid;
+        saveGameData();
     });
 
     // 接收玩家加入事件
     socket.on('playerJoined', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         renderPlayersTable(data.players);
 
         // 如果是主持人，检查是否满员并启用开始按钮
@@ -571,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 接收游戏开始事件
     socket.on('gameStarted', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         console.log('Game started event received');
 
         // 初始化曝光玩家列表
@@ -625,6 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
             gameStarted: true,
             currentRound: 1
         };
+        
+        // 保存游戏数据到localStorage
+        saveGameData();
 
         // 渲染环境牌
         renderEnvCards(data.envCards);
@@ -647,27 +812,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 更新操作区域
     function updateActionSection() {
+        // 确保在游戏开始后隐藏所有不需要的区域
+        joinRoomSection.style.display = 'none';
+        createRoomSection.style.display = 'none';
+        playerListSection.style.display = 'none';
+        
         if (currentPlayer.isGod) {
             handCardsSection.style.display = 'none';
             playerActions.style.display = 'none';
             godActions.style.display = 'block';
         } else {
-            joinRoomSection.style.display = 'none';
+            handCardsSection.style.display = 'block';
             playerActions.style.display = 'grid';
             godActions.style.display = 'none';
+        }
+        
+        // 确保游戏区域显示
+        if (gameState.gameStarted) {
+            gameArea.style.display = 'block';
         }
     }
 
     // 接收翻牌事件
     socket.on('cardFlipped', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         renderEnvCard(data.cardIndex, data.card);
         updateEnvTable(data.cardIndex, data.card);
     });
 
     // 接收环境牌更新事件
     socket.on('updateEnvTable', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         const cell = document.getElementById(`env-card-cell-${data.cardIndex}`);
         if (!cell) return;
 
@@ -686,42 +861,198 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 接收手牌更新事件
     socket.on('updateHandCards', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         if (data.uuid === currentPlayer.uuid) {
             currentPlayer.handCards = data.handCards;
             renderHandCardsTable();
             selectedCardIndex = -1;
+            // 更新localStorage中的手牌信息
+            saveGameData();
         }
     });
 
     // 接收游戏状态更新事件
     socket.on('gameStateUpdate', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
 
         // 保存旧轮次值
         const oldRound = gameState.currentRound;
 
+        // 更新游戏状态
         gameState = data;
-        updateActionHistoryTable();
-
+        console.log('Game state updated:', data);
+        
+        // 重置所有本地UI状态变量
+        approvalPending = false;
+        selectedCardElement = null;
+        selectedCardIndex = -1;
+        lastHighlightedCell = null;
+        currentActionType = null;
+        currentActionData = null;
+        
+        // 恢复本地状态变量
+        currentRound = gameState.currentRound || 1;
+        
+        // 确保revealedPlayers数组存在
+        if (!gameState.revealedPlayers) {
+            gameState.revealedPlayers = [];
+        }
+        
+        // 恢复revealIndex状态
+        revealIndex = gameState.revealedPlayers.length;
+        
+        // 找到当前玩家
+        const player = gameState.players.find(p => p.uuid === currentPlayer.uuid);
+        
+        // 恢复actionTaken状态
+        if (player && player.actions) {
+            actionTaken = !!player.actions[currentRound];
+        } else {
+            actionTaken = false;
+        }
+        
         // 恢复游戏界面
         if (gameState.gameStarted) {
+            console.log('Restoring game interface...');
+            // 隐藏玩家列表区域，显示游戏区域
             playerListSection.style.display = 'none';
             gameArea.style.display = 'block';
+            joinRoomSection.style.display = 'none';
+            createRoomSection.style.display = 'none';
 
-            // 更新玩家手牌
-            const player = gameState.players.find(p => p.uuid === currentPlayer.uuid);
+            // 更新房间信息显示
+            if (gameState.room) {
+                document.getElementById('roomId').textContent = gameState.room.id || '';
+                document.getElementById('gameModeDisplay').textContent = 
+                    (gameState.room.mode === 'normal' ? '普通模式' : '里世界模式') || '';
+                document.getElementById('playerCountDisplay').textContent = gameState.room.playerCount || '';
+                roomIdDisplay.textContent = gameState.room.id || '';
+            }
+
+            // 找到当前玩家并更新信息
             if (player) {
-                currentPlayer.handCards = player.handCards;
+                // 保存checkedPlayers数组
+                const oldCheckedPlayers = currentPlayer.checkedPlayers || [];
+                
+                // 更新当前玩家信息
+                currentPlayer = player;
+                currentPlayer.isGod = player.role === 'god';
+                
+                // 恢复checkedPlayers数组（如果服务器没有同步，使用本地保存的）
+                currentPlayer.checkedPlayers = player.checkedPlayers || oldCheckedPlayers;
+                
+                // 更新玩家信息显示
+                document.getElementById('playerNameDisplay').textContent = player.name || '';
+                document.getElementById('playerIdDisplay').textContent = player.playerId || '';
+                document.getElementById('playerIdentity').textContent = player.identity || '';
+
+                // 更新玩家手牌
+                currentPlayer.handCards = player.handCards || [];
                 renderHandCardsTable();
+                // 更新localStorage中的手牌信息
+                saveGameData();
+
+                // 更新操作区域
+                updateActionSection();
+                
+                // 渲染玩家信息表格
+                renderPlayersInfoTable(gameState.players);
+            } else {
+                console.log('Player not found with UUID:', currentPlayer.uuid);
+                console.log('Available players:', gameState.players.map(p => p.uuid));
+                // 尝试从保存的游戏数据中恢复
+                const savedData = loadGameData();
+                if (savedData && savedData.currentPlayer) {
+                    currentPlayer.uuid = savedData.currentPlayer.uuid;
+                    currentPlayer.playerId = savedData.currentPlayer.playerId;
+                    currentPlayer.name = savedData.currentPlayer.name;
+                    currentPlayer.role = savedData.currentPlayer.role;
+                    currentPlayer.identity = savedData.currentPlayer.identity;
+                    currentPlayer.handCards = savedData.currentPlayer.handCards || [];
+                    currentPlayer.isGod = savedData.currentPlayer.role === 'god';
+                    
+                    // 立即更新页面上显示的玩家信息
+                    document.getElementById('playerNameDisplay').textContent = savedData.currentPlayer.name || '';
+                    document.getElementById('playerIdDisplay').textContent = savedData.currentPlayer.playerId || '';
+                    document.getElementById('playerIdentity').textContent = savedData.currentPlayer.identity || '';
+                    
+                    // 渲染手牌表格
+                    renderHandCardsTable();
+                    // 更新localStorage中的手牌信息
+                    saveGameData();
+                    
+                    // 更新操作区域，确保底部按钮显示
+                    updateActionSection();
+                }
+                // 渲染玩家信息表格
+                renderPlayersInfoTable(gameState.players);
+            }
+
+            // 渲染环境牌
+            renderEnvCards(gameState.envCards);
+            renderEnvTable(gameState.envCards);
+
+            // 初始化或更新行动历史表格
+            initActionHistoryTable();
+            updateActionHistoryTable();
+            
+            // 恢复按钮状态
+            if (actionTaken) {
+                disableActionButtons();
+            } else {
+                enableActionButtons();
+            }
+            
+            // 恢复翻开按钮状态
+            if (godRevealBtn) {
+                const playersCount = gameState.players.filter(p => p.role === 'player').length;
+                godRevealBtn.disabled = revealIndex >= playersCount;
+            }
+            
+            // 恢复开始游戏按钮状态
+            if (startGameBtn) {
+                startGameBtn.style.display = 'none';
+            }
+            
+            // 恢复技能区域显示
+            if (skillSection) {
+                skillSection.style.display = 'block';
+            }
+        } else {
+            // 游戏未开始状态
+            if (gameState.room) {
+                // 显示玩家列表区域
+                playerListSection.style.display = 'block';
+                gameArea.style.display = 'none';
+                joinRoomSection.style.display = 'none';
+                createRoomSection.style.display = 'none';
+                
+                // 更新房间ID显示
+                roomIdDisplay.textContent = gameState.room.id || '';
+                
+                // 渲染玩家列表
+                renderPlayersTable(gameState.players);
+                
+                // 恢复开始游戏按钮状态（仅上帝可见）
+                if (startGameBtn) {
+                    if (currentPlayer.isGod) {
+                        startGameBtn.style.display = 'block';
+                        // 检查是否满员
+                        const playerCount = gameState.players.filter(p => p.role === 'player').length;
+                        startGameBtn.disabled = playerCount < gameState.room.playerCount;
+                    } else {
+                        startGameBtn.style.display = 'none';
+                    }
+                }
             }
         }
 
         // 当轮次变化时重置翻开索引和按钮状态
         if (oldRound !== data.currentRound) {
-            // if (gameState.currentRound !== data.currentRound) {
             revealIndex = 0; // 重置翻开索引
-            godRevealBtn.disabled = false; // 启用翻开按钮
+            if (godRevealBtn) {
+                godRevealBtn.disabled = false; // 启用翻开按钮
+            }
 
             // 恢复空押和押牌
             enableActionButtons();
@@ -1000,14 +1331,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (approvalPending) return;
 
                         sendApprovalRequest('hpMinus');
-                        // approvalPending = true;
-                        // currentActionType = 'hpMinus';
-
-                        // // 发送请求给主持人
-                        // socket.emit('sendRequestToHost', {
-                        //     actionType: '血量减少',
-                        //     playerName: currentPlayer.name
-                        // });
                     });
                     hpContainer.appendChild(minusBtn);
                 }
@@ -1026,14 +1349,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (approvalPending) return;
 
                         sendApprovalRequest('hpPlus');
-                        // approvalPending = true;
-                        // currentActionType = 'hpPlus';
-
-                        // // 发送请求给主持人
-                        // socket.emit('sendRequestToHost', {
-                        //     actionType: '血量增加',
-                        //     playerName: currentPlayer.name
-                        // });
                     });
                     hpContainer.appendChild(plusBtn);
                 }
@@ -1105,14 +1420,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 接收玩家信息更新事件
     socket.on('updatePlayerInfo', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         gameState.players = data.players;
         renderPlayersInfoTable(data.players);
     });
 
     // 接收曝光事件
     socket.on('identityExposed', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         // 避免重复添加
         if (!gameState.exposedPlayers.includes(data.targetUuid)) {
             gameState.exposedPlayers.push(data.targetUuid);
@@ -1543,7 +1858,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 接收公示技能事件
     socket.on('skillAnnounced', (data) => {
-        noSleep.enable();
+        keepScreenAwake();
         // 主持人不需要显示
         //if (currentPlayer.isGod) return;
 
@@ -1597,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 接收房间重置事件
     socket.on('roomReset', () => {
-        noSleep.enable();
+        keepScreenAwake();
         createRoomSection.style.display = 'block';
         joinRoomSection.style.display = 'none';
         playerListSection.style.display = 'none';

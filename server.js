@@ -12,6 +12,20 @@ const io = socketIo(server);
 // 设置静态文件目录
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 添加reset路由，用于关闭服务器
+app.get('/reset', (req, res) => {
+    console.log('Reset request received, shutting down server...');
+    res.send('Server is shutting down...');
+    
+    // 关闭服务器
+    setTimeout(() => {
+        server.close(() => {
+            console.log('Server closed');
+            process.exit(0);
+        });
+    }, 1000);
+});
+
 // 身份配置
 const identityConfig = {
     normal: {
@@ -57,7 +71,8 @@ let gameState = {
     gameStarted: false,
     currentRound: 1,
     exposedPlayers: [], // 存储被曝光玩家的UUID
-    revealedPlayers: [] // 存储已翻开的玩家
+    revealedPlayers: [], // 存储已翻开的玩家
+    announcedSkills: [] // 存储已公示的技能
 };
 
 // 最后联系的玩家
@@ -95,7 +110,9 @@ io.on('connection', (socket) => {
             actionDeck: [],
             gameStarted: false,
             currentRound: 1,
-            exposedPlayers: [] // 重置曝光列表
+            exposedPlayers: [], // 重置曝光列表
+            revealedPlayers: [], // 重置已翻开玩家列表
+            announcedSkills: [] // 重置已公示技能列表
         };
 
         // 创建新房间
@@ -206,6 +223,8 @@ io.on('connection', (socket) => {
         try {
             // 重置曝光列表
             gameState.exposedPlayers = [];
+            // 重置已翻开玩家列表
+            gameState.revealedPlayers = [];
 
             // 分配环境牌
             gameState.envCards = drawEnvCards();
@@ -510,10 +529,19 @@ io.on('connection', (socket) => {
         const player = gameState.players.find(p => p.uuid === data.uuid);
         if (!player || player.role !== 'player') return;
 
+        // 存储公示的技能
+        const skillData = {
+            playerName: player.name,
+            skillCode: data.skillCode,
+            skillText: data.skillText,
+            timestamp: Date.now()
+        };
+        gameState.announcedSkills.push(skillData);
+
         // 广播给所有玩家
         io.emit('skillAnnounced', {
             playerName: player.name,
-            // skillCode: data.skillCode,
+            skillCode: data.skillCode,
             skillText: data.skillText
         });
     });
@@ -756,22 +784,27 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Client disconnected');
 
-        // 移除断开连接的玩家
+        // 找到断开连接的玩家
         const disconnectedPlayer = gameState.players.find(p => p.id === socket.id);
         if (disconnectedPlayer) {
             console.log(`Player disconnected: ${disconnectedPlayer.name}`);
+            // 标记为断开状态而非移除
+            disconnectedPlayer.connected = false;
+            // 通知所有玩家该玩家已断开
+            io.emit('playerDisconnected', { uuid: disconnectedPlayer.uuid });
         }
 
-        gameState.players = gameState.players.filter(player => player.id !== socket.id);
-
-        // 处理主持人断开连接
+        // 处理主持人断开连接 - 不再重置游戏状态
         if (gameState.room && gameState.room.god === socket.id) {
-            console.log('Host disconnected, resetting room');
-            gameState.room = null;
-            gameState.players = [];
-            gameState.gameStarted = false;
-            io.emit('roomReset');
-        } else if (gameState.players.length > 0) {
+            console.log('Host disconnected, marking as disconnected');
+            // 只是记录上帝断开，不重置游戏
+            if (disconnectedPlayer) {
+                disconnectedPlayer.connected = false;
+            }
+        }
+
+        // 通知其他玩家更新玩家列表
+        if (gameState.players.length > 0) {
             io.emit('playerJoined', {
                 players: gameState.players
             });
@@ -830,6 +863,46 @@ io.on('connection', (socket) => {
         return shuffleArray(drawnCards);
     }
 
+    // 玩家重连事件处理
+    socket.on('reconnectPlayer', (data) => {
+        const player = gameState.players.find(p => p.uuid === data.uuid);
+
+        if (player) {
+            player.id = socket.id; // 更新socket ID
+            player.connected = true; // 标记为已连接
+
+            // 如果是主持人恢复，更新上帝socket ID
+            if (player.role === 'god' && gameState.room) {
+                gameState.room.god = socket.id;
+                console.log('Host reconnected:', player.name);
+            } else {
+                console.log('Player reconnected:', player.name);
+            }
+
+            // 发送完整游戏状态给重连的玩家
+            socket.emit('gameStateUpdate', gameState);
+            
+            // 同步已公示的技能给重连的玩家
+            gameState.announcedSkills.forEach(skill => {
+                socket.emit('skillAnnounced', {
+                    playerName: skill.playerName,
+                    skillCode: skill.skillCode,
+                    skillText: skill.skillText
+                });
+            });
+            
+            // 通知所有玩家该玩家已重连
+            io.emit('playerReconnected', { uuid: player.uuid });
+            
+            // 通知所有玩家更新玩家列表
+            io.emit('playerJoined', {
+                players: gameState.players
+            });
+        } else {
+            console.log('Reconnect failed: Player not found with UUID:', data.uuid);
+        }
+    });
+
     // 辅助函数：生成行动牌
     function generateActionCards() {
         const actionCards = [];
@@ -848,5 +921,5 @@ io.on('connection', (socket) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3080;
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
