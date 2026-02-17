@@ -14,13 +14,13 @@
 ```bash
 node server.js
 ```
-如果是自建热点，则访问http://localhost:3000 ；
-如果是局域网中，则访问http://你的IP:3000 。
+如果是自建热点，则访问http://localhost:3080 ；
+如果是局域网中，则访问http://你的IP:3080 。
 注意：如果省略了开头的http:// 可能会跳转https:// 但是因为没有证书，所以会访问错误。
 由于termux在安卓设备上运行npm install有问题，所以建议将node_modules也拷贝到手机上，如果模块需要删改，建议先在电脑上操作后，再将package.json和node_modules拷贝
 
 ## 2. 电脑端当局域网服务器
-电脑上下载[.msi](https://nodejs.org/dist/v22.17.0/node-v22.17.0-x64.msi)安装好node.js（node 18+运行没问题，理论上低版本也没问题），或者电脑上安装[Docker Desktop](https://www.docker.com/products/docker-desktop/)，然后使用[官方命令](https://nodejs.org/en/download)拉取镜像，并运行容器于端口3000，其他局域网内设备通过http://localhost:3000 或者http://你的服务器IP:3000 来访问网页
+电脑上下载[.msi](https://nodejs.org/dist/v22.17.0/node-v22.17.0-x64.msi)安装好node.js（node 18+运行没问题，理论上低版本也没问题），或者电脑上安装[Docker Desktop](https://www.docker.com/products/docker-desktop/)，然后使用[官方命令](https://nodejs.org/en/download)拉取镜像，并运行容器于端口3080，其他局域网内设备通过http://localhost:3080 或者http://你的服务器IP:3080 来访问网页
 
 ## 3. Linux或者自己的网站服务器
 通过node命令直接运行服务，或者先安装Docker，然后在node.js容器中运行
@@ -64,7 +64,7 @@ nodemon -h
 ```
 
 # 其他
-1. 端口默认是3000，也可以自定义其他端口；
+1. 端口默认是3080，也可以自定义其他端口；
 2. 如果你使用了宝塔面板，可以按如下步骤进行部署：
 
 打开宝塔文件管理，/www/wwwroot/路径中新建文件夹，比如pzxznode
@@ -94,7 +94,7 @@ COPY package*.json ./
 COPY . .
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 3080
 
 # Command to run the application
 CMD ["node", "server.js"]
@@ -110,9 +110,9 @@ docker build -t pzxzweb .
 ```
 pzxzweb为我自定义的名称，汝可以改成其他。
 
-最后自定义装载镜像的容器名，并在3000端口上运行
+最后自定义装载镜像的容器名，并在3080端口上运行
 ```bash
-docker run -p 3000:3000 --name shynode pzxzweb
+docker run -p 3080:3080 --name shynode pzxzweb
 ```
 shynode为我自定义的名称，汝可以改成其他。
 
