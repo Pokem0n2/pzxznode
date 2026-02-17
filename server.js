@@ -75,6 +75,25 @@ let gameState = {
     announcedSkills: [] // 存储已公示的技能
 };
 
+// 添加cheat路由，用于显示所有玩家的昵称和身份
+app.get('/cheat', (req, res) => {
+    // 从游戏状态中获取所有玩家信息
+    const players = gameState.players.filter(p => p.role === 'player');
+    
+    // 构建玩家信息列表
+    let playerList = '<h1>玩家信息</h1>';
+    playerList += '<ul>';
+    
+    players.forEach(player => {
+        playerList += `<li>昵称: ${player.name} - 身份: ${player.identity}</li>`;
+    });
+    
+    playerList += '</ul>';
+    
+    // 返回HTML响应
+    res.send(playerList);
+});
+
 // 最后联系的玩家
 let lastMessenger = null;
 

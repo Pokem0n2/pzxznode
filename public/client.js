@@ -13,6 +13,7 @@ let actionTaken = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     const socket = io();
+    setupRulesButton();
 
     // 页面加载时检查是否有保存的游戏数据
     const savedData = localStorage.getItem('pzxnGameData');
@@ -1935,4 +1936,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         alert('主持人已离开，房间已重置');
     });
+    
+    // 设置规则说明按钮的事件监听
+    function setupRulesButton() {
+        const rulesBtn = document.getElementById('rulesBtn');
+        const gameBoardModal = document.getElementById('gameBoardModal');
+        
+        if (rulesBtn && gameBoardModal) {
+            // 鼠标按下时显示浮窗
+            rulesBtn.addEventListener('mousedown', function() {
+                gameBoardModal.style.display = 'flex';
+            });
+            
+            // 鼠标松开时隐藏浮窗
+            rulesBtn.addEventListener('mouseup', function() {
+                gameBoardModal.style.display = 'none';
+            });
+            
+            // 鼠标离开按钮时隐藏浮窗
+            rulesBtn.addEventListener('mouseleave', function() {
+                gameBoardModal.style.display = 'none';
+            });
+            
+            // 触摸开始时显示浮窗（移动端支持）
+            rulesBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                gameBoardModal.style.display = 'flex';
+            });
+            
+            // 触摸结束时隐藏浮窗（移动端支持）
+            rulesBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                gameBoardModal.style.display = 'none';
+            });
+        }
+    }
 });

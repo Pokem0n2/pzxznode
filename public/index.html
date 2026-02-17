@@ -56,42 +56,47 @@
     <!-- 游戏区域 -->
     <div id="gameArea" style="display: none;">
         <div class="game-header">
-            <div class="room-info">
-                <div class="hidden">房间号: <span id="roomId"></span></div>
-                <div>模式: <span id="gameModeDisplay"></span></div>
-                <div>人数: <span id="playerCountDisplay"></span></div>
+            <div class="header-content">
+                <div class="room-info">
+                    <div class="hidden">房间号: <span id="roomId"></span></div>
+                    <div>模式: <span id="gameModeDisplay"></span></div>
+                    <div>人数: <span id="playerCountDisplay"></span></div>
+                </div>
+                <div class="player-info">
+                    <div>玩家: <span id="playerNameDisplay"></span></div>
+                    <div>序号: <span id="playerIdDisplay"></span></div>
+                    <div>身份: <span id="playerIdentity"></span></div>
+                </div>
             </div>
-            <div class="player-info">
-                <div>玩家: <span id="playerNameDisplay"></span></div>
-                <div>序号: <span id="playerIdDisplay"></span></div>
-                <div>身份: <span id="playerIdentity"></span></div>
-            </div>
+            <button id="rulesBtn" class="rules-btn">规则说明</button>
         </div>
-        <div class="game-board">
-            <div class="intro">
-                <p><strong>普通模式：</strong></p>
-                <p>&nbsp;&nbsp;7人局：5名乘客、2名屁者 </p>
-                <p>&nbsp;&nbsp;8人局：6名乘客、1名屁者、1名响屁者（翻开小屁时，自曝加伤害） </p>
-                <p>&nbsp;&nbsp;9人局：6名乘客、3名屁者 </p>
-                <p>10人局：7名乘客、2名屁者、1名响屁者 </p>
-                <p><strong>里世界模式： </strong></p>
-                <p>&nbsp;&nbsp;8人局：4名乘客、1名探员、1名神父、1名小丑、1名响屁者 </p>
-                <p>&nbsp;&nbsp;9人局：4名乘客、1名探员、1名神父、1名小丑、2名屁者 </p>
-                <p>10人局：5名乘客、1名探员、1名神父、1名小丑、1名屁者、1名响屁者 </p><br>
-                <p><strong>有臭屁：对所有玩家造成2点伤害 </strong></p>
-                <p>有闷屁：对所有押牌玩家造成1点伤害，对所有空押玩家造成3点伤害。 </p>
-                <p><strong>有蔫儿屁：对所有玩家造成1点伤害，并使下1张无屁牌视为对所有玩家造成1点伤害的小屁牌； </strong></p>
-                <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若4张无屁牌均已翻开，则本次伤害不可防御。 </strong></p>
-                <p>有彩虹屁：对所有押牌玩家造成1点不可防御的伤害，对所有空押玩家造成2点伤害。 </p>
-                <p><strong>有连环屁：对所有玩家造成1点伤害，若上1张牌为小屁牌，则本次伤害+1； </strong></p>
-                <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若下1张牌为小屁牌，则该小屁牌伤害+1。（这里上一张和下一张特指相邻的牌） </strong></p>
-                <br>
-                <p>吸：无屁回合，抽2张牌，有屁回合，额外受1点伤害。 </p>
-                <p>骂：有屁回合，抽1张牌，投票+0.5，且投票阶段不可弃票。 </p>
-                <p>忍：防御本回合所有伤害。 </p>
-                <p>抓：有屁回合，可选择1位玩家，对其造成1点不可防御的伤害。 </p>
-                <p>吹：有屁回合，抽1张牌，并选择对相邻的两位玩家中的一位造成1点伤害。 </p>
-                <p>听：有屁回合，独自检视1位活跃玩家的身份。</p>
+        <div id="gameBoardModal" class="game-board-modal">
+            <div class="game-board-content">
+                <div class="intro">
+                    <p><strong>普通模式：</strong></p>
+                    <p>&nbsp;&nbsp;7人局：5名乘客、2名屁者 </p>
+                    <p>&nbsp;&nbsp;8人局：6名乘客、1名屁者、1名响屁者（翻开小屁时，自曝加伤害） </p>
+                    <p>&nbsp;&nbsp;9人局：6名乘客、3名屁者 </p>
+                    <p>10人局：7名乘客、2名屁者、1名响屁者 </p>
+                    <p><strong>里世界模式： </strong></p>
+                    <p>&nbsp;&nbsp;8人局：4名乘客、1名探员、1名神父、1名小丑、1名响屁者 </p>
+                    <p>&nbsp;&nbsp;9人局：4名乘客、1名探员、1名神父、1名小丑、2名屁者 </p>
+                    <p>10人局：5名乘客、1名探员、1名神父、1名小丑、1名屁者、1名响屁者 </p><br>
+                    <p><strong>有臭屁：对所有玩家造成2点伤害 </strong></p>
+                    <p>有闷屁：对所有押牌玩家造成1点伤害，对所有空押玩家造成3点伤害。 </p>
+                    <p><strong>有蔫儿屁：对所有玩家造成1点伤害，并使下1张无屁牌视为对所有玩家造成1点伤害的小屁牌； </strong></p>
+                    <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若4张无屁牌均已翻开，则本次伤害不可防御。 </strong></p>
+                    <p>有彩虹屁：对所有押牌玩家造成1点不可防御的伤害，对所有空押玩家造成2点伤害。 </p>
+                    <p><strong>有连环屁：对所有玩家造成1点伤害，若上1张牌为小屁牌，则本次伤害+1； </strong></p>
+                    <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;若下1张牌为小屁牌，则该小屁牌伤害+1。（这里上一张和下一张特指相邻的牌） </strong></p>
+                    <br>
+                    <p>吸：无屁回合，抽2张牌，有屁回合，额外受1点伤害。 </p>
+                    <p>骂：有屁回合，抽1张牌，投票+0.5，且投票阶段不可弃票。 </p>
+                    <p>忍：防御本回合所有伤害。 </p>
+                    <p>抓：有屁回合，可选择1位玩家，对其造成1点不可防御的伤害。 </p>
+                    <p>吹：有屁回合，抽1张牌，并选择对相邻的两位玩家中的一位造成1点伤害。 </p>
+                    <p>听：有屁回合，独自检视1位活跃玩家的身份。</p>
+                </div>
             </div>
         </div>
         <!-- 技能介绍区域 -->
