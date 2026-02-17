@@ -467,6 +467,9 @@ p {
     cursor: pointer;
     background-color: #f1f8e9;
     transition: background-color 0.2s;
+    min-height: 60px;
+    height: 60px;
+    vertical-align: middle;
 }
 
 /* 添加手牌高亮样式 */
