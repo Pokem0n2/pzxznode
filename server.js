@@ -113,9 +113,9 @@ app.get('/cards', (req, res) => {
         
         cardCount++;
         
-        // 每十个元素换一行
+        // 每十个元素换一行，使用<br>标签实现换行
         if (cardCount % 10 === 0 && index < remainingCards.length - 1) {
-            cardsString += '\n';
+            cardsString += '<br>';
         }
     });
     
@@ -124,7 +124,7 @@ app.get('/cards', (req, res) => {
         cardsString = '牌组已耗尽';
     }
     
-    // 返回文本响应
+    // 返回HTML响应，确保换行被正确渲染
     res.send(cardsString);
 });
 
@@ -303,7 +303,8 @@ io.on('connection', (socket) => {
 
             // 初始化行动牌堆
             gameState.actionDeck = generateActionCards();
-            shuffleArray(gameState.actionDeck);
+            // 接收shuffleArray的返回值，确保牌组被打乱
+            gameState.actionDeck = shuffleArray(gameState.actionDeck);
 
             // 角色按钮数组（打乱顺序）
             const characterButtons = shuffleArray([
