@@ -953,6 +953,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 更新localStorage中的手牌信息
                 saveGameData();
 
+                // 主持人不需要操作列
+                actionColumnHeader.style.display = currentPlayer.isGod ? 'none' : 'table-cell';
+                
                 // 更新操作区域
                 updateActionSection();
                 
@@ -965,25 +968,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const savedData = loadGameData();
                 if (savedData && savedData.currentPlayer) {
                     currentPlayer.uuid = savedData.currentPlayer.uuid;
-                    currentPlayer.playerId = savedData.currentPlayer.playerId;
-                    currentPlayer.name = savedData.currentPlayer.name;
-                    currentPlayer.role = savedData.currentPlayer.role;
-                    currentPlayer.identity = savedData.currentPlayer.identity;
-                    currentPlayer.handCards = savedData.currentPlayer.handCards || [];
-                    currentPlayer.isGod = savedData.currentPlayer.role === 'god';
-                    
-                    // 立即更新页面上显示的玩家信息
-                    document.getElementById('playerNameDisplay').textContent = savedData.currentPlayer.name || '';
-                    document.getElementById('playerIdDisplay').textContent = savedData.currentPlayer.playerId || '';
-                    document.getElementById('playerIdentity').textContent = savedData.currentPlayer.identity || '';
-                    
-                    // 渲染手牌表格
-                    renderHandCardsTable();
-                    // 更新localStorage中的手牌信息
-                    saveGameData();
-                    
-                    // 更新操作区域，确保底部按钮显示
-                    updateActionSection();
+                currentPlayer.playerId = savedData.currentPlayer.playerId;
+                currentPlayer.name = savedData.currentPlayer.name;
+                currentPlayer.role = savedData.currentPlayer.role;
+                currentPlayer.identity = savedData.currentPlayer.identity;
+                currentPlayer.handCards = savedData.currentPlayer.handCards || [];
+                currentPlayer.isGod = savedData.currentPlayer.role === 'god';
+                
+                // 立即更新页面上显示的玩家信息
+                document.getElementById('playerNameDisplay').textContent = savedData.currentPlayer.name || '';
+                document.getElementById('playerIdDisplay').textContent = savedData.currentPlayer.playerId || '';
+                document.getElementById('playerIdentity').textContent = savedData.currentPlayer.identity || '';
+                
+                // 主持人不需要操作列
+                actionColumnHeader.style.display = currentPlayer.isGod ? 'none' : 'table-cell';
+                
+                // 渲染手牌表格
+                renderHandCardsTable();
+                // 更新localStorage中的手牌信息
+                saveGameData();
+                
+                // 更新操作区域，确保底部按钮显示
+                updateActionSection();
                 }
                 // 渲染玩家信息表格
                 renderPlayersInfoTable(gameState.players);
