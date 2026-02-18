@@ -109,7 +109,7 @@ p {
 .header-content {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 20px;
     flex: 1;
 }
 
@@ -467,12 +467,7 @@ p {
     cursor: pointer;
     background-color: #f1f8e9;
     transition: background-color 0.2s;
-    height: 15px;
-}
-
-.player-info {
-    padding: 5px;
-    line-height: 2;
+    height: 25px;
 }
 
 /* 添加手牌高亮样式 */
@@ -595,6 +590,30 @@ p {
 
 .mb-15 {
     margin-bottom: 15px;
+}
+
+/* 查验和曝光按钮样式 */
+.check-btn,
+.expose-btn {
+    padding: 3px 10px;
+    margin: 0 2px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s ease;
+    width: 50px;
+    height: 25px;
+}
+
+.check-btn {
+    background: var(--primary-gradient);
+    color: white;
+}
+
+.expose-btn {
+    background: var(--accent-gradient);
+    color: white;
 }
 
 /* 状态标签 */
