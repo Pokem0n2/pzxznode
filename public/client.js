@@ -15,6 +15,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const socket = io();
     setupRulesButton();
 
+    // DOM元素
+    const createRoomSection = document.getElementById('createRoomSection');
+    const joinRoomSection = document.getElementById('joinRoomSection');
+    const playerListSection = document.getElementById('playerListSection');
+    const gameArea = document.getElementById('gameArea');
+    const skillSection = document.getElementById('skillSection');
+    const handCardsSection = document.getElementById('handCardsSection');
+    const actionColumnHeader = document.getElementById('actionColumnHeader');
+
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+
     // 页面加载时检查是否有保存的游戏数据
     const savedData = localStorage.getItem('pzxnGameData');
     if (savedData) {
@@ -48,19 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to parse saved game data:', error);
         }
     }
-
-    // DOM元素
-    const createRoomSection = document.getElementById('createRoomSection');
-    const joinRoomSection = document.getElementById('joinRoomSection');
-    const playerListSection = document.getElementById('playerListSection');
-    const gameArea = document.getElementById('gameArea');
-    const skillSection = document.getElementById('skillSection');
-    const handCardsSection = document.getElementById('handCardsSection');
-    const actionColumnHeader = document.getElementById('actionColumnHeader');
-
-    const createRoomBtn = document.getElementById('createRoomBtn');
-    const joinRoomBtn = document.getElementById('joinRoomBtn');
-    const startGameBtn = document.getElementById('startGameBtn');
 
     const roomIdDisplay = document.getElementById('roomIdDisplay');
     const playersTableBody = document.getElementById('playersTableBody');
@@ -544,6 +544,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 监听重连成功事件
+    socket.on('reconnectSuccess', (data) => {
+        console.log('Reconnect success:', data);
+        
+        // 更新游戏状态
+        gameState = data.gameState;
+        
+        // 更新当前玩家信息
+        const player = gameState.players.find(p => p.uuid === currentPlayer.uuid);
+        if (player) {
+            currentPlayer = player;
+            currentPlayer.isGod = player.role === 'god';
+        }
+        
+        // 检查是否是上帝玩家，如果是，显示开始游戏按钮
+        if ((currentPlayer.isGod || currentPlayer.playerId === 0) && startGameBtn && !gameState.gameStarted) {
+            startGameBtn.style.display = 'block';
+            // 检查是否满员
+            const playerCount = gameState.players.filter(p => p.role === 'player').length;
+            const roomPlayerCount = gameState.room ? gameState.room.playerCount : 0;
+            startGameBtn.disabled = playerCount < roomPlayerCount;
+        }
+        
+        // 渲染玩家列表
+        renderPlayersTable(gameState.players);
+    });
+
     // 初始化手牌表格
     function initHandCardsTable() {
         handCardsTable.innerHTML = '';
@@ -614,11 +641,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPlayersTable(data.players);
         
         // 检查是否是上帝玩家，如果是，显示开始游戏按钮
-        if (currentPlayer.isGod && startGameBtn) {
+        // 同时检查playerId是否为0，因为这是上帝玩家的标识
+        if ((currentPlayer.isGod || currentPlayer.playerId === 0) && startGameBtn) {
             startGameBtn.style.display = 'block';
             // 检查是否满员
             const playerCount = data.players.filter(p => p.role === 'player').length;
-            const roomPlayerCount = data.room ? data.room.playerCount : 0;
+            // 尝试从不同来源获取房间玩家数量
+            const roomPlayerCount = data.room ? data.room.playerCount : (gameState.room ? gameState.room.playerCount : 0);
             startGameBtn.disabled = playerCount < roomPlayerCount;
         }
     });
@@ -1047,11 +1076,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 恢复开始游戏按钮状态（仅上帝可见）
                 if (startGameBtn) {
-                    if (currentPlayer.isGod) {
+                    if (currentPlayer.isGod || currentPlayer.playerId === 0) {
                         startGameBtn.style.display = 'block';
                         // 检查是否满员
                         const playerCount = gameState.players.filter(p => p.role === 'player').length;
-                        startGameBtn.disabled = playerCount < gameState.room.playerCount;
+                        const roomPlayerCount = gameState.room ? gameState.room.playerCount : 0;
+                        startGameBtn.disabled = playerCount < roomPlayerCount;
                     } else {
                         startGameBtn.style.display = 'none';
                     }
