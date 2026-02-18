@@ -48,13 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to parse saved game data:', error);
         }
     }
-    
-    // 确保在页面加载时，如果是上帝且有房间存在，开始游戏按钮会显示
-    if (currentPlayer.isGod && gameState.room) {
-        startGameBtn.style.display = 'block';
-    } else {
-        startGameBtn.style.display = 'none';
-    }
 
     // DOM元素
     const createRoomSection = document.getElementById('createRoomSection');
@@ -620,15 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
         roomIdDisplay.textContent = data.roomId;
         renderPlayersTable(data.players);
         
-        // 检查是否是上帝，如果是，显示开始游戏按钮
-        if (currentPlayer.isGod) {
+        // 检查是否是上帝玩家，如果是，显示开始游戏按钮
+        if (currentPlayer.isGod && startGameBtn) {
             startGameBtn.style.display = 'block';
             // 检查是否满员
-            const playerCount = data.playerCount || gameState.room?.playerCount || 0;
-            const currentPlayers = data.players.filter(p => p.role === 'player').length;
-            startGameBtn.disabled = currentPlayers < playerCount;
-        } else {
-            startGameBtn.style.display = 'none';
+            const playerCount = data.players.filter(p => p.role === 'player').length;
+            const roomPlayerCount = data.room ? data.room.playerCount : 0;
+            startGameBtn.disabled = playerCount < roomPlayerCount;
         }
     });
 
@@ -740,12 +731,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPlayersTable(data.players);
 
         // 如果是主持人，检查是否满员并启用开始按钮
-        if (currentPlayer.playerId === 0) {
-            const playerCount = gameState.room.playerCount;
+        if (currentPlayer.playerId === 0 && startGameBtn) {
+            const playerCount = gameState.room ? gameState.room.playerCount : 0;
             const currentPlayers = data.players.filter(p => p.role === 'player').length;
 
             if (currentPlayers === playerCount) {
                 startGameBtn.disabled = false;
+            } else {
+                startGameBtn.disabled = true;
             }
         }
     });
