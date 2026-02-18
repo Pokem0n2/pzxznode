@@ -544,32 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 监听重连成功事件
-    socket.on('reconnectSuccess', (data) => {
-        console.log('Reconnect success:', data);
-        
-        // 更新游戏状态
-        gameState = data.gameState;
-        
-        // 更新当前玩家信息
-        const player = gameState.players.find(p => p.uuid === currentPlayer.uuid);
-        if (player) {
-            currentPlayer = player;
-            currentPlayer.isGod = player.role === 'god';
-        }
-        
-        // 检查是否是上帝玩家，如果是，显示开始游戏按钮
-        if ((currentPlayer.isGod || currentPlayer.playerId === 0) && startGameBtn && !gameState.gameStarted) {
-            startGameBtn.style.display = 'block';
-            // 检查是否满员
-            const playerCount = gameState.players.filter(p => p.role === 'player').length;
-            const roomPlayerCount = gameState.room ? gameState.room.playerCount : 0;
-            startGameBtn.disabled = playerCount < roomPlayerCount;
-        }
-        
-        // 渲染玩家列表
-        renderPlayersTable(gameState.players);
-    });
+
 
     // 初始化手牌表格
     function initHandCardsTable() {
@@ -646,8 +621,8 @@ document.addEventListener('DOMContentLoaded', () => {
             startGameBtn.style.display = 'block';
             // 检查是否满员
             const playerCount = data.players.filter(p => p.role === 'player').length;
-            // 尝试从不同来源获取房间玩家数量
-            const roomPlayerCount = data.room ? data.room.playerCount : (gameState.room ? gameState.room.playerCount : 0);
+            // 尝试从游戏状态中获取房间玩家数量
+            const roomPlayerCount = gameState.room ? gameState.room.playerCount : 0;
             startGameBtn.disabled = playerCount < roomPlayerCount;
         }
     });
@@ -1076,12 +1051,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 恢复开始游戏按钮状态（仅上帝可见）
                 if (startGameBtn) {
-                    if (currentPlayer.isGod || currentPlayer.playerId === 0) {
+                    // 检查是否是上帝玩家，同时检查playerId是否为0
+                    const isGod = currentPlayer.isGod || currentPlayer.playerId === 0;
+                    console.log('Checking if user is God:', isGod);
+                    console.log('Current player:', currentPlayer);
+                    
+                    if (isGod) {
                         startGameBtn.style.display = 'block';
                         // 检查是否满员
                         const playerCount = gameState.players.filter(p => p.role === 'player').length;
                         const roomPlayerCount = gameState.room ? gameState.room.playerCount : 0;
                         startGameBtn.disabled = playerCount < roomPlayerCount;
+                        console.log('Start game button displayed:', startGameBtn.style.display);
+                        console.log('Player count:', playerCount, 'Room player count:', roomPlayerCount);
+                        console.log('Start game button disabled:', startGameBtn.disabled);
                     } else {
                         startGameBtn.style.display = 'none';
                     }
