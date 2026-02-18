@@ -612,6 +612,15 @@ document.addEventListener('DOMContentLoaded', () => {
         playerListSection.style.display = 'block';
         roomIdDisplay.textContent = data.roomId;
         renderPlayersTable(data.players);
+        
+        // 检查是否是上帝，如果是，显示开始游戏按钮
+        // 从数据中查找当前玩家，检查是否是上帝
+        const savedData = loadGameData();
+        if (savedData && savedData.currentPlayer && savedData.currentPlayer.role === 'god') {
+            startGameBtn.style.display = 'block';
+            // 暂时禁用按钮，等待游戏状态更新后再检查是否满员
+            startGameBtn.disabled = true;
+        }
     });
 
     // 创建房间
