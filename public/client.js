@@ -612,15 +612,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playerListSection.style.display = 'block';
         roomIdDisplay.textContent = data.roomId;
         renderPlayersTable(data.players);
-        
-        // 检查是否是上帝，如果是，显示开始游戏按钮
-        // 从数据中查找当前玩家，检查是否是上帝
-        const savedData = loadGameData();
-        if (savedData && savedData.currentPlayer && savedData.currentPlayer.role === 'god') {
-            startGameBtn.style.display = 'block';
-            // 暂时禁用按钮，等待游戏状态更新后再检查是否满员
-            startGameBtn.disabled = true;
-        }
     });
 
     // 创建房间
@@ -921,54 +912,6 @@ document.addEventListener('DOMContentLoaded', () => {
             actionTaken = false;
         }
         
-        // 先更新当前玩家信息
-        if (player) {
-            // 保存checkedPlayers数组
-            const oldCheckedPlayers = currentPlayer.checkedPlayers || [];
-            
-            // 更新当前玩家信息
-            currentPlayer = player;
-            currentPlayer.isGod = player.role === 'god';
-            
-            // 恢复checkedPlayers数组（如果服务器没有同步，使用本地保存的）
-            currentPlayer.checkedPlayers = player.checkedPlayers || oldCheckedPlayers;
-            
-            // 更新玩家信息显示
-            document.getElementById('playerNameDisplay').textContent = player.name || '';
-            document.getElementById('playerIdDisplay').textContent = player.playerId || '';
-            document.getElementById('playerIdentity').textContent = player.identity || '';
-
-            // 更新玩家手牌
-            currentPlayer.handCards = player.handCards || [];
-            renderHandCardsTable();
-            // 更新localStorage中的手牌信息
-            saveGameData();
-        } else {
-            console.log('Player not found with UUID:', currentPlayer.uuid);
-            console.log('Available players:', gameState.players.map(p => p.uuid));
-            // 尝试从保存的游戏数据中恢复
-            const savedData = loadGameData();
-            if (savedData && savedData.currentPlayer) {
-                currentPlayer.uuid = savedData.currentPlayer.uuid;
-                currentPlayer.playerId = savedData.currentPlayer.playerId;
-                currentPlayer.name = savedData.currentPlayer.name;
-                currentPlayer.role = savedData.currentPlayer.role;
-                currentPlayer.identity = savedData.currentPlayer.identity;
-                currentPlayer.handCards = savedData.currentPlayer.handCards || [];
-                currentPlayer.isGod = savedData.currentPlayer.role === 'god';
-                
-                // 立即更新页面上显示的玩家信息
-                document.getElementById('playerNameDisplay').textContent = savedData.currentPlayer.name || '';
-                document.getElementById('playerIdDisplay').textContent = savedData.currentPlayer.playerId || '';
-                document.getElementById('playerIdentity').textContent = savedData.currentPlayer.identity || '';
-                
-                // 渲染手牌表格
-                renderHandCardsTable();
-                // 更新localStorage中的手牌信息
-                saveGameData();
-            }
-        }
-        
         // 恢复游戏界面
         if (gameState.gameStarted) {
             console.log('Restoring game interface...');
@@ -987,11 +930,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 roomIdDisplay.textContent = gameState.room.id || '';
             }
 
-            // 更新操作区域
-            updateActionSection();
-            
-            // 渲染玩家信息表格
-            renderPlayersInfoTable(gameState.players);
+            // 找到当前玩家并更新信息
+            if (player) {
+                // 保存checkedPlayers数组
+                const oldCheckedPlayers = currentPlayer.checkedPlayers || [];
+                
+                // 更新当前玩家信息
+                currentPlayer = player;
+                currentPlayer.isGod = player.role === 'god';
+                
+                // 恢复checkedPlayers数组（如果服务器没有同步，使用本地保存的）
+                currentPlayer.checkedPlayers = player.checkedPlayers || oldCheckedPlayers;
+                
+                // 更新玩家信息显示
+                document.getElementById('playerNameDisplay').textContent = player.name || '';
+                document.getElementById('playerIdDisplay').textContent = player.playerId || '';
+                document.getElementById('playerIdentity').textContent = player.identity || '';
+
+                // 更新玩家手牌
+                currentPlayer.handCards = player.handCards || [];
+                renderHandCardsTable();
+                // 更新localStorage中的手牌信息
+                saveGameData();
+
+                // 更新操作区域
+                updateActionSection();
+                
+                // 渲染玩家信息表格
+                renderPlayersInfoTable(gameState.players);
+            } else {
+                console.log('Player not found with UUID:', currentPlayer.uuid);
+                console.log('Available players:', gameState.players.map(p => p.uuid));
+                // 尝试从保存的游戏数据中恢复
+                const savedData = loadGameData();
+                if (savedData && savedData.currentPlayer) {
+                    currentPlayer.uuid = savedData.currentPlayer.uuid;
+                    currentPlayer.playerId = savedData.currentPlayer.playerId;
+                    currentPlayer.name = savedData.currentPlayer.name;
+                    currentPlayer.role = savedData.currentPlayer.role;
+                    currentPlayer.identity = savedData.currentPlayer.identity;
+                    currentPlayer.handCards = savedData.currentPlayer.handCards || [];
+                    currentPlayer.isGod = savedData.currentPlayer.role === 'god';
+                    
+                    // 立即更新页面上显示的玩家信息
+                    document.getElementById('playerNameDisplay').textContent = savedData.currentPlayer.name || '';
+                    document.getElementById('playerIdDisplay').textContent = savedData.currentPlayer.playerId || '';
+                    document.getElementById('playerIdentity').textContent = savedData.currentPlayer.identity || '';
+                    
+                    // 渲染手牌表格
+                    renderHandCardsTable();
+                    // 更新localStorage中的手牌信息
+                    saveGameData();
+                    
+                    // 更新操作区域，确保底部按钮显示
+                    updateActionSection();
+                }
+                // 渲染玩家信息表格
+                renderPlayersInfoTable(gameState.players);
+            }
 
             // 渲染环境牌
             renderEnvCards(gameState.envCards);
