@@ -332,7 +332,8 @@ io.on('connection', (socket) => {
                 // 发4张初始手牌
                 for (let i = 0; i < 4; i++) {
                     if (gameState.actionDeck.length > 0) {
-                        player.handCards.push(shuffleArray(gameState.actionDeck).pop());
+                        // 从头部取元素，符合发牌规则
+                        player.handCards.push(gameState.actionDeck.shift());
                     }
                 }
                 console.log(`Dealt 4 cards to ${player.name}`);
@@ -428,7 +429,8 @@ io.on('connection', (socket) => {
             case 'draw':
                 // 摸牌操作
                 if (gameState.actionDeck.length > 0 && player.handCards.length < 16) {
-                    const card = shuffleArray(gameState.actionDeck).pop();
+                    // 从头部取元素，符合发牌规则
+                    const card = gameState.actionDeck.shift();
                     player.handCards.push(card);
 
                     // 通知玩家更新手牌
