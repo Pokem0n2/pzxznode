@@ -94,6 +94,40 @@ app.get('/cheat', (req, res) => {
     res.send(playerList);
 });
 
+// 添加cards路由，用于返回剩余牌组元素
+app.get('/cards', (req, res) => {
+    // 从游戏状态中获取剩余牌组
+    const remainingCards = gameState.actionDeck;
+    
+    // 构建牌组元素字符串，每十个元素换一行，用全角逗号分隔
+    let cardsString = '';
+    let cardCount = 0;
+    
+    remainingCards.forEach((card, index) => {
+        cardsString += card.name;
+        
+        // 不是最后一个元素时添加全角逗号
+        if (index < remainingCards.length - 1) {
+            cardsString += '，';
+        }
+        
+        cardCount++;
+        
+        // 每十个元素换一行
+        if (cardCount % 10 === 0 && index < remainingCards.length - 1) {
+            cardsString += '\n';
+        }
+    });
+    
+    // 如果没有剩余牌组，返回提示信息
+    if (remainingCards.length === 0) {
+        cardsString = '牌组已耗尽';
+    }
+    
+    // 返回文本响应
+    res.send(cardsString);
+});
+
 // 最后联系的玩家
 let lastMessenger = null;
 
