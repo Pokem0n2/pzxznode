@@ -48,6 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to parse saved game data:', error);
         }
     }
+    
+    // 确保在页面加载时，如果是上帝且有房间存在，开始游戏按钮会显示
+    if (currentPlayer.isGod && gameState.room) {
+        startGameBtn.style.display = 'block';
+    } else {
+        startGameBtn.style.display = 'none';
+    }
 
     // DOM元素
     const createRoomSection = document.getElementById('createRoomSection');
@@ -612,6 +619,17 @@ document.addEventListener('DOMContentLoaded', () => {
         playerListSection.style.display = 'block';
         roomIdDisplay.textContent = data.roomId;
         renderPlayersTable(data.players);
+        
+        // 检查是否是上帝，如果是，显示开始游戏按钮
+        if (currentPlayer.isGod) {
+            startGameBtn.style.display = 'block';
+            // 检查是否满员
+            const playerCount = data.playerCount || gameState.room?.playerCount || 0;
+            const currentPlayers = data.players.filter(p => p.role === 'player').length;
+            startGameBtn.disabled = currentPlayers < playerCount;
+        } else {
+            startGameBtn.style.display = 'none';
+        }
     });
 
     // 创建房间
